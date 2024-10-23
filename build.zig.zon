@@ -1,0 +1,16 @@
+.{
+    .name = "binaryen-zig",
+    .version = "0.1.0",
+    .minimum_zig_version = "0.13.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "binaryen.zig",
+        "wasm_intrinsics.cpp",
+        "wasm_intrinsics.zig",
+        "test.zig",
+        "third_party",
+    },
+}
