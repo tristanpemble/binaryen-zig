@@ -163,7 +163,7 @@ pub const Type = enum(usize) {
         return byn.BinaryenTypeArity(@intFromEnum(self));
     }
     pub fn expand(self: Type, allocator: std.mem.Allocator) ![]Type {
-        var buf = try allocator.alloc(Type, self.arity());
+        const buf = try allocator.alloc(Type, self.arity());
         byn.BinaryenTypeExpand(@intFromEnum(self), @ptrCast(buf.ptr));
         return buf;
     }
