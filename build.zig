@@ -6,10 +6,6 @@ pub fn build(b: *std.Build) void {
     const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
 
-    const binaryen_mod = b.addModule("binaryen", .{
-        .root_source_file = b.path("binaryen.zig"),
-    });
-
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
         .target = target,
@@ -348,13 +344,17 @@ pub fn build(b: *std.Build) void {
     lib.installHeader(b.path("src/binaryen-c.h"), "binaryen/binaryen.h");
     lib.installHeader(b.path("src/wasm-delegations.def"), "binaryen/wasm-delegations.def");
 
+    const binaryen_mod = b.addModule("binaryen", .{
+        .root_source_file = b.path("binaryen.zig"),
+    });
+    binaryen_mod.linkLibrary(lib);
+
     const tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
     });
     tests.root_module.addImport("binaryen", binaryen_mod);
 
     tests.linkLibC();
-    tests.linkLibrary(lib);
 
     b.step("test", "run wrapper library tests").dependOn(&b.addRunArtifact(tests).step);
 }
