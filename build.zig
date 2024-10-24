@@ -6,20 +6,9 @@ pub fn build(b: *std.Build) void {
     const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
 
-    // FIXME: need to debug include order, it's catching my system include first...
-    // doing this instead for now
-    const binaryen_c = b.addTranslateC(.{
-        .root_source_file = b.path("./src/binaryen-c.h"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const binaryen_c_mod = binaryen_c.createModule();
-
     const binaryen_mod = b.addModule("binaryen", .{
         .root_source_file = b.path("binaryen.zig"),
     });
-    binaryen_mod.addImport("c", binaryen_c_mod);
 
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
@@ -27,7 +16,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
     });
-    lib.root_module.addImport("c", binaryen_c_mod);
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
 
