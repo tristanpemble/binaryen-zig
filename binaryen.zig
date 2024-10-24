@@ -1,8 +1,10 @@
 const std = @import("std");
-const byn = @cImport({
-    @cInclude("stdlib.h");
-    @cInclude("binaryen/binaryen.h");
-});
+// const byn = @cImport({
+//     @cInclude("stdlib.h");
+//     //@cInclude("binaryen-c.h");
+//     @cInclude("/home/mike/projects//binaryen-zig/src/binaryen-c.h");
+// });
+const byn = @import("c");
 
 pub fn freeEmit(buf: []u8) void {
     byn.free(buf.ptr);

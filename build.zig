@@ -3,8 +3,23 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const assertions = b.option(bool, "assertions", "Enable assertions (default: true)") orelse true;
+    const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
+
+    // FIXME: need to debug include order, it's catching my system include first...
+    // doing this instead for now
+    const binaryen_c = b.addTranslateC(.{
+        .root_source_file = b.path("./src/binaryen-c.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const binaryen_c_mod = binaryen_c.createModule();
+
+    const binaryen_mod = b.addModule("binaryen", .{
+        .root_source_file = b.path("binaryen.zig"),
+    });
+    binaryen_mod.addImport("c", binaryen_c_mod);
 
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
@@ -12,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
     });
+    lib.root_module.addImport("c", binaryen_c_mod);
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
 
@@ -22,6 +38,14 @@ pub fn build(b: *std.Build) void {
     }
     if (!assertions) {
         lib.defineCMacro("NDEBUG", null);
+    }
+
+    // TODO: wasm target? Might require emscripten though
+
+    if (target.result.os.tag == .windows) {
+        lib.defineCMacro("_GNU_SOURCE", null);
+        lib.defineCMacro("__STDC_FORMAT_MACROS", null);
+        // TODO: -wl,/stack:8388608
     }
 
     const flags: []const []const u8 = &.{
@@ -45,14 +69,6 @@ pub fn build(b: *std.Build) void {
         // FIXME: only needed in release
         "-Wno-unused-but-set-variable",
     };
-
-    // TODO: wasm target? Might require emscripten though
-
-    if (target.result.os.tag == .windows) {
-        lib.defineCMacro("_GNU_SOURCE", null);
-        lib.defineCMacro("__STDC_FORMAT_MACROS", null);
-        // TODO: -wl,/stack:8388608
-    }
 
     lib.addCSourceFiles(.{
         .files = &.{
@@ -344,13 +360,11 @@ pub fn build(b: *std.Build) void {
     lib.installHeader(b.path("src/binaryen-c.h"), "binaryen/binaryen.h");
     lib.installHeader(b.path("src/wasm-delegations.def"), "binaryen/wasm-delegations.def");
 
-    const mod = b.addModule("binaryen", .{
-        .root_source_file = b.path("binaryen.zig"),
-    });
     const tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
     });
-    tests.root_module.addImport("binaryen", mod);
+    tests.root_module.addImport("binaryen", binaryen_mod);
+
     tests.linkLibC();
     tests.linkLibrary(lib);
 
