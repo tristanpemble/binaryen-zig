@@ -68,9 +68,31 @@ pub const Module = opaque {
     }
 };
 
+pub const Index = byn.BinaryenIndex;
+
 pub const Expression = opaque {
+    pub const Op = enum(byn.BinaryenOp) {
+        _,
+
+        pub fn addInt32() Op {
+            return @enumFromInt(byn.BinaryenAddInt32());
+        }
+
+        inline fn c(self: Op) byn.BinaryenOp {
+            return @intFromEnum(self);
+        }
+    };
+
     inline fn c(self: *Expression) byn.BinaryenExpressionRef {
         return @ptrCast(self);
+    }
+
+    pub inline fn localGet(module: *Module, index: Index, type_: Type) *Expression {
+        return @ptrCast(byn.BinaryenLocalGet(module.c(), index, @intFromEnum(type_)));
+    }
+
+    pub inline fn binaryOp(module: *Module, op: Op, lhs: *Expression, rhs: *Expression) *Expression {
+        return @ptrCast(byn.BinaryenBinary(module.c(), op.c(), lhs.c(), rhs.c()));
     }
 };
 
