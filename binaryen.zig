@@ -78,6 +78,32 @@ pub const Expression = opaque {
             return @enumFromInt(byn.BinaryenAddInt32());
         }
 
+        // byn.BinaryenAddInt64
+        // byn.BinaryenAddFloat32
+        // byn.BinaryenAddFloat64
+        // byn.BinaryenIf
+        // byn.BinaryenNop
+        // byn.BinaryenLocalSet
+        // byn.BinaryenPopcntInt32
+        // byn.BinaryenPopcntInt64
+        // byn.BinaryenPop
+        // byn.BinaryenSubInt32
+        // byn.BinaryenSubInt64
+        // byn.BinaryenSubFloat32
+        // byn.BinaryenSubFloat64
+        // byn.BinaryenDivSInt32
+        // byn.BinaryenDivUInt32
+        // byn.BinaryenDivSInt64
+        // byn.BinaryenDivUInt64
+        // byn.BinaryenDivFloat32
+        // byn.BinaryenDivFloat64
+        // byn.BinaryenMulInt32
+        // byn.BinaryenMulInt64
+        // byn.BinaryenMulFloat64
+        // byn.BinaryenMulFloat32
+        // byn.BinaryenMaxFloat32
+        // byn.BinaryenMaxFloat64
+
         inline fn c(self: Op) byn.BinaryenOp {
             return @intFromEnum(self);
         }
