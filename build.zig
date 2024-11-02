@@ -7,15 +7,19 @@ pub fn build(b: *std.Build) void {
     const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
     const force_web = b.option(bool, "force_web", "override native target to web") orelse false;
+    _ = force_web;
 
     const web_target_query = CrossTarget.parse(.{
         .arch_os_abi = "wasm32-wasi-musl",
         .cpu_features = "mvp+atomics+bulk_memory",
     }) catch unreachable;
 
+    const web_target = b.resolveTargetQuery(web_target_query);
+
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
-        .target = if (force_web) b.resolveTargetQuery(web_target_query) else target,
+        //.target = if (force_web) web_target else target,
+        .target = web_target,
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
         .single_threaded = false,
@@ -378,16 +382,32 @@ pub fn build(b: *std.Build) void {
         .flags = flags,
     });
 
+    // REPORTME: can't link a wasm static lib to a wasm exe due to __stack_chk_fail symbol
+    // collisions, so avoid linking libc if using wasm-wasi target
+    //// FIXME: doesn't check if wasi
+    // if (target.result.isWasm() and target.result.isMusl()) {
+    //     // FIXME: find how to reference the zig installation?
+    //     lib.defineCMacro("__NEED_wint_t", null);
+    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libcxx/include" });
+    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libc/musl/include" });
+    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libc/include/wasm-wasi-musl" });
+    // } else {
     lib.linkLibC();
     lib.linkLibCpp();
+    // }
+
     b.installArtifact(lib);
     lib.installHeader(b.path("binaryen/src/binaryen-c.h"), "binaryen/binaryen.h");
     lib.installHeader(b.path("binaryen/src/wasm-delegations.def"), "binaryen/wasm-delegations.def");
 
     const binaryen_mod = b.addModule("binaryen", .{
         .root_source_file = b.path("binaryen.zig"),
+        .single_threaded = false, // NOTE: wasi builds require this
+        //.target = if (force_web) web_target else target,
+        .target = web_target,
     });
     binaryen_mod.linkLibrary(lib);
+    binaryen_mod.addIncludePath(b.path("binaryen/src"));
 
     const tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
