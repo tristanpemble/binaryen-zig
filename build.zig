@@ -15,7 +15,9 @@ pub fn build(b: *std.Build) void {
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
 
-    lib.addIncludePath(b.path("src"));
+    lib.addIncludePath(b.path("binaryen/src"));
+    lib.addIncludePath(b.path("binaryen/third_party/FP16/include"));
+
     if (dwarf) {
         lib.defineCMacro("BUILD_LLVM_DWARF", null);
         lib.addIncludePath(b.path("binaryen/third_party/llvm-project/include"));
@@ -261,7 +263,6 @@ pub fn build(b: *std.Build) void {
             "binaryen/src/wasm/parsing.cpp",
             "binaryen/src/wasm/wasm-binary.cpp",
             "binaryen/src/wasm/wasm.cpp",
-            "binaryen/src/wasm/wasm-debug.cpp",
             "binaryen/src/wasm/wasm-emscripten.cpp",
             "binaryen/src/wasm/wasm-interpreter.cpp",
             "binaryen/src/wasm/wasm-io.cpp",
@@ -274,6 +275,7 @@ pub fn build(b: *std.Build) void {
         },
         .flags = flags,
     });
+
     // wasm-debug.cpp includes LLVM header using std::iterator (deprecated in C++17)
     lib.addCSourceFile(.{
         .file = b.path("binaryen/src/wasm/wasm-debug.cpp"),
