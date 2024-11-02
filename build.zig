@@ -1,19 +1,31 @@
 const std = @import("std");
+const CrossTarget = std.zig.CrossTarget;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
+    const force_web = b.option(bool, "force_web", "override native target to web") orelse false;
+
+    const web_target_query = CrossTarget.parse(.{
+        .arch_os_abi = "wasm32-wasi-musl",
+        .cpu_features = "mvp+atomics+bulk_memory",
+    }) catch unreachable;
 
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
-        .target = target,
+        .target = if (force_web) b.resolveTargetQuery(web_target_query) else target,
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
+        .single_threaded = false,
     });
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
+
+    lib.shared_memory = true;
+    lib.export_memory = true;
+    lib.import_memory = true;
 
     lib.addIncludePath(b.path("binaryen/src"));
     lib.addIncludePath(b.path("binaryen/third_party/FP16/include"));
