@@ -18,12 +18,13 @@ pub fn build(b: *std.Build) void {
 
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
-        //.target = if (force_web) web_target else target,
         .target = web_target,
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
         .single_threaded = false,
     });
+
+    b.getInstallStep().dependOn(&lib.step);
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
 
@@ -382,19 +383,8 @@ pub fn build(b: *std.Build) void {
         .flags = flags,
     });
 
-    // REPORTME: can't link a wasm static lib to a wasm exe due to __stack_chk_fail symbol
-    // collisions, so avoid linking libc if using wasm-wasi target
-    //// FIXME: doesn't check if wasi
-    // if (target.result.isWasm() and target.result.isMusl()) {
-    //     // FIXME: find how to reference the zig installation?
-    //     lib.defineCMacro("__NEED_wint_t", null);
-    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libcxx/include" });
-    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libc/musl/include" });
-    //     lib.addIncludePath(.{ .cwd_relative = "/usr/lib/zig/libc/include/wasm-wasi-musl" });
-    // } else {
     lib.linkLibC();
     lib.linkLibCpp();
-    // }
 
     b.installArtifact(lib);
     lib.installHeader(b.path("binaryen/src/binaryen-c.h"), "binaryen/binaryen.h");
@@ -403,11 +393,20 @@ pub fn build(b: *std.Build) void {
     const binaryen_mod = b.addModule("binaryen", .{
         .root_source_file = b.path("binaryen.zig"),
         .single_threaded = false, // NOTE: wasi builds require this
-        //.target = if (force_web) web_target else target,
         .target = web_target,
     });
     binaryen_mod.linkLibrary(lib);
     binaryen_mod.addIncludePath(b.path("binaryen/src"));
+
+    const exe = b.addExecutable(.{
+        .name = "wasm-test",
+        .root_source_file = b.path("./wasm-test.zig"),
+        //.single_threaded = false,
+        .target = web_target,
+    });
+    //exe.entry = .disabled;
+    exe.root_module.addImport("binaryen", binaryen_mod);
+    exe.linkLibCpp();
 
     const tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
@@ -417,6 +416,8 @@ pub fn build(b: *std.Build) void {
     tests.linkLibC();
 
     b.step("test", "run wrapper library tests").dependOn(&b.addRunArtifact(tests).step);
+
+    b.step("web", "run wrapper library tests").dependOn(&b.addInstallArtifact(exe, .{}).step);
 }
 
 fn extraFlags(b: *std.Build, flags: []const []const u8, more: []const []const u8) []const []const u8 {
