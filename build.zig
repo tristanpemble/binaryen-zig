@@ -1,24 +1,28 @@
 const std = @import("std");
-const CrossTarget = std.zig.CrossTarget;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const assertions = b.option(bool, "assertions", "Enable assertions (default true in debug builds)") orelse (optimize == .Debug);
     const dwarf = b.option(bool, "dwarf", "Enable full DWARF support") orelse true;
-    const force_web = b.option(bool, "force_web", "override native target to web") orelse false;
-    _ = force_web;
 
-    const web_target_query = CrossTarget.parse(.{
-        .arch_os_abi = "wasm32-wasi-musl",
-        .cpu_features = "mvp+atomics+bulk_memory",
-    }) catch unreachable;
+    const web_target_query = std.Target.Query{
+        .cpu_arch = .wasm32,
+        .os_tag = .freestanding, // can't use freestanding cuz binaryen
+        //.abi = .musl,
+        // https://github.com/ziglang/zig/pull/16207
+        .cpu_features_add = std.Target.wasm.featureSet(&.{
+            .atomics,
+            .multivalue,
+            .bulk_memory,
+        }),
+    };
 
     const web_target = b.resolveTargetQuery(web_target_query);
 
     const lib = b.addStaticLibrary(.{
         .name = "binaryen",
-        .target = web_target,
+        .target = target,
         .optimize = optimize,
         .root_source_file = b.path("wasm_intrinsics.zig"),
         .single_threaded = false,
@@ -28,9 +32,11 @@ pub fn build(b: *std.Build) void {
 
     lib.defineCMacro("BUILD_STATIC_LIBRARY", null);
 
-    lib.shared_memory = true;
-    lib.export_memory = true;
-    lib.import_memory = true;
+    if (target.result.isWasm()) {
+        lib.shared_memory = true;
+        lib.export_memory = true;
+        lib.import_memory = true;
+    }
 
     lib.addIncludePath(b.path("binaryen/src"));
     lib.addIncludePath(b.path("binaryen/third_party/FP16/include"));
@@ -393,7 +399,7 @@ pub fn build(b: *std.Build) void {
     const binaryen_mod = b.addModule("binaryen", .{
         .root_source_file = b.path("binaryen.zig"),
         .single_threaded = false, // NOTE: wasi builds require this
-        .target = web_target,
+        .target = target,
     });
     binaryen_mod.linkLibrary(lib);
     binaryen_mod.addIncludePath(b.path("binaryen/src"));
@@ -401,12 +407,12 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "wasm-test",
         .root_source_file = b.path("./wasm-test.zig"),
-        //.single_threaded = false,
+        .single_threaded = false,
         .target = web_target,
     });
-    //exe.entry = .disabled;
     exe.root_module.addImport("binaryen", binaryen_mod);
-    exe.linkLibCpp();
+    //exe.linkLibCpp();
+    //exe.linkLibrary(lib);
 
     const tests = b.addTest(.{
         .root_source_file = b.path("test.zig"),
