@@ -2,7 +2,12 @@
     .name = "binaryen-zig",
     .version = "0.1.0",
     .minimum_zig_version = "0.13.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .binaryen = .{
+            .url = "https://github.com/WebAssembly/binaryen/archive/690576cda63d59ae0cfc3906e1146a7a4278db43.zip",
+            .hash = "1220157cf700dee7c94ba946e99dd0a62dc890b5111482b31420279c82819eda3e06",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",
