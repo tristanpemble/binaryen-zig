@@ -408,8 +408,8 @@ pub fn build(b: *std.Build) void {
     lib.linkLibCpp();
 
     b.installArtifact(lib);
-    lib.installHeader(b.path("src/binaryen-c.h"), "binaryen/binaryen.h");
-    lib.installHeader(b.path("src/wasm-delegations.def"), "binaryen/wasm-delegations.def");
+    lib.installHeader(origin_dep.path("src/binaryen-c.h"), "binaryen/binaryen.h");
+    lib.installHeader(origin_dep.path("src/wasm-delegations.def"), "binaryen/wasm-delegations.def");
 
     const binaryen_mod = b.addModule("binaryen", .{
         .root_source_file = b.path("binaryen.zig"),
