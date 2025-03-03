@@ -15,6 +15,7 @@
         "src",
         "binaryen.zig",
         "wasm_intrinsics.cpp",
+        "wasm_intrinsics.wat",
         "wasm_intrinsics.zig",
         "test.zig",
         "third_party",
