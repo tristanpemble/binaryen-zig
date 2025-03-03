@@ -11,6 +11,7 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
+        "cxa_stubs.zig",
         "src",
         "binaryen.zig",
         "wasm_intrinsics.cpp",
